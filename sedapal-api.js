@@ -19,55 +19,55 @@ class SedapalAPISimple {
   async buscarRecibos(nis) {
     try {
       const clean = String(nis).replace(/\D+/g, '');
-<<<<<<< Updated upstream
-      const r = await fetch(`${this.pythonURL}/api/recibos/${clean}`);
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      const d = await r.json();
-=======
       console.log(`🔍 Buscando recibos REALES: ${clean}`);
       const r = await fetch(`${this.pythonURL}/api/recibos/${clean}?t=${Date.now()}`, { cache: 'no-store' });
->>>>>>> Stashed changes
 
+      if (!r.ok) {
+        const txt = await r.text().catch(()=>'');
+        throw new Error(`HTTP ${r.status} ${r.statusText} :: ${txt.slice(0,200)}`);
+      }
+      const ct = (r.headers.get('content-type') || '').toLowerCase();
+      if (!ct.includes('application/json')) {
+        const txt = await r.text().catch(()=>'');
+        throw new Error(`No JSON (${ct}) :: ${txt.slice(0,200)}`);
+      }
+
+      const d = await r.json();
       if (d && d.ok === true && Array.isArray(d.items)) {
-        const lista = d.items.map((it, i) => ({
+        const lista = d.items.map((it,i)=>({
           ...it,
-          index: i + 1,
+          index:i+1,
           periodo: it.mes || it.f_fact || '',
           es_deuda: (it.estado || it.est_rec || '').toLowerCase().includes('impag'),
-          color_estado: (it.estado || it.est_rec || '').toLowerCase().includes('impag') ? '🟡 PENDIENTE' : '✅ PAGADO',
-          datos_reales: true,
+          color_estado: (it.estado || it.est_rec || '').toLowerCase().includes('impag') ? '🟡 PENDIENTE':'✅ PAGADO',
+          datos_reales:true,
           fuente: d.source || 'SEDAPAL_HTTP',
         }));
-        return { success: true, recibos: lista, total: lista.length, esReal: true };
+        return { success:true, recibos:lista, total:lista.length, esReal:true };
       }
-
       if (d && d.success && Array.isArray(d.recibos)) {
-        return { success: true, recibos: d.recibos, total: d.total ?? d.recibos.length, esReal: true };
+        return { success:true, recibos:d.recibos, total:d.total ?? d.recibos.length, esReal:true };
       }
-
       throw new Error('Respuesta desconocida del backend');
     } catch (e) {
-      console.error('❌ Error backend:', e.message);
-      return { success: true, recibos: this.generarDatosPrueba(nis), total: 5, esReal: false };
+      console.error('❌ Error backend:', e?.message || e);
+      return { success:true, recibos:this.generarDatosPrueba(nis), total:5, esReal:false };
     }
   }
 
   async descargarPDF(recibo) {
     try {
-      const r = await fetch(`${this.pythonURL}/api/pdf/${recibo.nis_rad}/${recibo.recibo}`);
+      const r = await fetch(`${this.pythonURL}/api/pdf/${recibo.nis_rad}/${recibo.recibo}`, { cache: 'no-store' });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const blob = await r.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url;
-      a.download = `SEDAPAL_${recibo.recibo}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 4000);
-      return { success: true };
+      a.href = url; a.download = `SEDAPAL_${recibo.recibo}.pdf`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url), 4000);
+      return { success:true };
     } catch (e) {
-      console.error('❌ Error PDF:', e.message);
+      console.error('❌ Error PDF:', e?.message || e);
       return await this.generarPDFMejorado(recibo);
     }
   }
