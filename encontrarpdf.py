@@ -41,7 +41,7 @@ class SedapalBuscadorInteractivo:
         }
         
     def configurar_driver(self):
-        """Configurar driver de Chrome para RENDER"""
+        """Configurar driver de Chrome para RENDER - SIN WebDriverManager"""
         try:
             print("🌐 Configurando Chrome para Render...")
             
@@ -60,22 +60,49 @@ class SedapalBuscadorInteractivo:
             chrome_options.add_argument('--disable-features=VizDisplayCompositor')
             chrome_options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36')
             
-            # ✅ RENDER.COM SPECIFIC CONFIG:
+            # ✅ RENDER.COM: Usar Chrome del sistema DIRECTO
             chrome_options.binary_location = '/usr/bin/google-chrome'
             
-            # Importar aquí para evitar errores
-            from webdriver_manager.chrome import ChromeDriverManager
+            # ✅ SIN WebDriverManager - Usar chromedriver del sistema
             from selenium.webdriver.chrome.service import Service
             
-            # ✅ RENDER: Usar WebDriverManager
-            try:
-                service = Service(ChromeDriverManager().install())
-                print("✅ ChromeDriver instalado vía WebDriverManager")
-            except Exception as e:
-                print(f"⚠️ WebDriverManager falló: {e}")
-                # Fallback: usar chromedriver sistema
-                service = Service('/usr/bin/chromedriver')
-                print("✅ Usando ChromeDriver del sistema")
+            # Intentar diferentes rutas de chromedriver
+            chromedriver_paths = [
+                '/usr/bin/chromedriver',
+                '/usr/local/bin/chromedriver',
+                'chromedriver'
+            ]
+            
+            service = None
+            for path in chromedriver_paths:
+                try:
+                    print(f"🔍 Probando ChromeDriver en: {path}")
+                    service = Service(path)
+                    # Test si existe y es ejecutable
+                    import os
+                    if os.path.exists(path) and os.access(path, os.X_OK):
+                        print(f"✅ ChromeDriver encontrado: {path}")
+                        break
+                    else:
+                        print(f"⚠️ No existe o no ejecutable: {path}")
+                except Exception as e:
+                    print(f"⚠️ Error con {path}: {e}")
+                    continue
+            
+            if not service:
+                # Fallback: instalar chromedriver manualmente
+                print("🔧 Instalando ChromeDriver manualmente...")
+                import subprocess
+                try:
+                    # Instalar chromedriver via apt
+                    subprocess.run(['apt-get', 'update'], check=True, capture_output=True)
+                    subprocess.run(['apt-get', 'install', '-y', 'chromium-driver'], check=True, capture_output=True)
+                    service = Service('/usr/bin/chromedriver')
+                    print("✅ ChromeDriver instalado vía apt")
+                except:
+                    # Último recurso
+                    service = Service()
+                    print("⚠️ Usando service por defecto")
             
             self.driver = webdriver.Chrome(service=service, options=chrome_options)
             self.driver.set_page_load_timeout(60)
@@ -85,7 +112,7 @@ class SedapalBuscadorInteractivo:
             
         except Exception as e:
             print(f"❌ Error configurando Chrome en Render: {e}")
-            print(f"❌ Detalles: {type(e).__name__}")
+            print(f"❌ Tipo de error: {type(e).__name__}")
             import traceback
             traceback.print_exc()
             return False

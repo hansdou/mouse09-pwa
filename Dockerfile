@@ -20,6 +20,7 @@ RUN apt-get update && apt-get install -y \
     libxdamage1 \
     libxrandr2 \
     xdg-utils \
+    chromium-driver \
     && rm -rf /var/lib/apt/lists/*
 
 # Instalar Chrome
@@ -29,10 +30,10 @@ RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add
     && apt-get install -y google-chrome-stable \
     && rm -rf /var/lib/apt/lists/*
 
-# Verificar instalación de Chrome
+# Verificar instalaciones
 RUN google-chrome --version
-RUN which google-chrome
-RUN ls -la /usr/bin/google-chrome
+RUN chromedriver --version
+RUN which chromedriver
 
 WORKDIR /app
 
