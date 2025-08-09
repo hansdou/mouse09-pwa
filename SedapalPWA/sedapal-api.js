@@ -52,7 +52,7 @@ class SedapalAPISimple {
         try {
             console.log('📄 Intentando PDF real...');
             
-            if (recibo.datos_reales && window.location.hostname !== 'localhost') {
+            if (recibo.datos_reales) {  // ← Permitir en ambos entornos
                 // En producción, PDF real solo si el backend funciona
                 const response = await fetch(`${this.pythonURL}/api/pdf/${recibo.nis_rad}/${recibo.recibo}`);
                 
