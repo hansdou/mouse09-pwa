@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from api.http_sedapal import SedapalHTTP
 import os
 
+<<<<<<< Updated upstream
 app = FastAPI(title="SEDAPAL Backend (HTTP)")
 origins = [
     "http://localhost:8080",
@@ -14,6 +15,14 @@ app.add_middleware(
     allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
+=======
+# CORS: GitHub Pages y localhost
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://hansdou.github.io", "http://localhost:8080"],
+    allow_credentials=False,
+    allow_methods=["GET", "HEAD", "OPTIONS"],
+>>>>>>> Stashed changes
     allow_headers=["*"],
 )
 
