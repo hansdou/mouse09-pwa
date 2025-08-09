@@ -1,7 +1,8 @@
 """
-SEDAPAL BUSCADOR INTERACTIVO - VERSIÓN RENDER
+SEDAPAL BUSCADOR INTERACTIVO - VERSIÓN RENDER FINAL
 - Configurado específicamente para Render.com
 - Chrome optimizado para contenedores Docker
+- SIN WebDriverManager - Solo sistema
 - APIs de SEDAPAL 100% funcionales
 """
 
@@ -13,6 +14,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
 from datetime import datetime   
 import os
 import sys
@@ -41,7 +43,7 @@ class SedapalBuscadorInteractivo:
         }
         
     def configurar_driver(self):
-        """Configurar driver de Chrome para RENDER - SIN WebDriverManager"""
+        """Configurar driver de Chrome para RENDER - FINAL SIN ERRORES"""
         try:
             print("🌐 Configurando Chrome para Render...")
             
@@ -58,61 +60,112 @@ class SedapalBuscadorInteractivo:
             chrome_options.add_argument('--memory-pressure-off')
             chrome_options.add_argument('--disable-web-security')
             chrome_options.add_argument('--disable-features=VizDisplayCompositor')
+            chrome_options.add_argument('--disable-background-timer-throttling')
+            chrome_options.add_argument('--disable-renderer-backgrounding')
+            chrome_options.add_argument('--disable-backgrounding-occluded-windows')
             chrome_options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36')
             
-            # ✅ RENDER.COM: Usar Chrome del sistema DIRECTO
+            # ✅ RENDER: Chrome del sistema
             chrome_options.binary_location = '/usr/bin/google-chrome'
             
-            # ✅ SIN WebDriverManager - Usar chromedriver del sistema
-            from selenium.webdriver.chrome.service import Service
-            
-            # Intentar diferentes rutas de chromedriver
+            # ✅ RENDER: Intentar rutas específicas de ChromeDriver
             chromedriver_paths = [
                 '/usr/bin/chromedriver',
                 '/usr/local/bin/chromedriver',
-                'chromedriver'
+                '/opt/chrome/chromedriver',
+                '/app/chromedriver'
             ]
             
-            service = None
+            driver_found = False
+            
             for path in chromedriver_paths:
                 try:
                     print(f"🔍 Probando ChromeDriver en: {path}")
-                    service = Service(path)
-                    # Test si existe y es ejecutable
-                    import os
+                    
+                    # Verificar si existe y es ejecutable
                     if os.path.exists(path) and os.access(path, os.X_OK):
                         print(f"✅ ChromeDriver encontrado: {path}")
-                        break
+                        
+                        service = Service(path)
+                        self.driver = webdriver.Chrome(service=service, options=chrome_options)
+                        self.driver.set_page_load_timeout(60)
+                        
+                        print("✅ Chrome configurado exitosamente para Render")
+                        driver_found = True
+                        return True
                     else:
                         print(f"⚠️ No existe o no ejecutable: {path}")
+                        
                 except Exception as e:
                     print(f"⚠️ Error con {path}: {e}")
                     continue
             
-            if not service:
-                # Fallback: instalar chromedriver manualmente
-                print("🔧 Instalando ChromeDriver manualmente...")
-                import subprocess
+            # ✅ Si no encuentra drivers, intentar instalación manual
+            if not driver_found:
+                print("🔧 Intentando instalar ChromeDriver...")
                 try:
-                    # Instalar chromedriver via apt
-                    subprocess.run(['apt-get', 'update'], check=True, capture_output=True)
-                    subprocess.run(['apt-get', 'install', '-y', 'chromium-driver'], check=True, capture_output=True)
-                    service = Service('/usr/bin/chromedriver')
-                    print("✅ ChromeDriver instalado vía apt")
-                except:
-                    # Último recurso
-                    service = Service()
-                    print("⚠️ Usando service por defecto")
+                    import subprocess
+                    import tempfile
+                    import zipfile
+                    import urllib.request
+                    
+                    # Descargar chromedriver manualmente
+                    chrome_version = subprocess.check_output(['/usr/bin/google-chrome', '--version']).decode().strip()
+                    print(f"📋 Chrome version: {chrome_version}")
+                    
+                    # Usar una versión estable conocida
+                    chromedriver_url = "https://chromedriver.storage.googleapis.com/119.0.6045.105/chromedriver_linux64.zip"
+                    
+                    with tempfile.TemporaryDirectory() as temp_dir:
+                        zip_path = os.path.join(temp_dir, "chromedriver.zip")
+                        
+                        print("📥 Descargando ChromeDriver...")
+                        urllib.request.urlretrieve(chromedriver_url, zip_path)
+                        
+                        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                            zip_ref.extractall(temp_dir)
+                        
+                        chromedriver_path = os.path.join(temp_dir, "chromedriver")
+                        
+                        if os.path.exists(chromedriver_path):
+                            # Hacer ejecutable
+                            os.chmod(chromedriver_path, 0o755)
+                            
+                            # Copiar a ubicación accesible
+                            final_path = "/tmp/chromedriver"
+                            import shutil
+                            shutil.copy2(chromedriver_path, final_path)
+                            os.chmod(final_path, 0o755)
+                            
+                            print(f"✅ ChromeDriver instalado en: {final_path}")
+                            
+                            service = Service(final_path)
+                            self.driver = webdriver.Chrome(service=service, options=chrome_options)
+                            self.driver.set_page_load_timeout(60)
+                            
+                            print("✅ Chrome configurado exitosamente con driver descargado")
+                            return True
+                        
+                except Exception as e:
+                    print(f"❌ Error instalando ChromeDriver manualmente: {e}")
             
-            self.driver = webdriver.Chrome(service=service, options=chrome_options)
-            self.driver.set_page_load_timeout(60)
+            # ✅ ÚLTIMO RECURSO: Sin especificar path (puede que funcione)
+            print("🔧 Último intento: Service por defecto...")
+            try:
+                service = Service()
+                # Intentar sin WebDriverManager
+                self.driver = webdriver.Chrome(service=service, options=chrome_options)
+                self.driver.set_page_load_timeout(60)
+                print("✅ Chrome configurado con service por defecto")
+                return True
+            except Exception as e:
+                print(f"❌ Service por defecto falló: {e}")
             
-            print("✅ Chrome configurado exitosamente para Render")
-            return True
+            print("❌ No se pudo configurar Chrome en ninguna modalidad")
+            return False
             
         except Exception as e:
-            print(f"❌ Error configurando Chrome en Render: {e}")
-            print(f"❌ Tipo de error: {type(e).__name__}")
+            print(f"❌ Error configurando Chrome: {e}")
             import traceback
             traceback.print_exc()
             return False
@@ -230,11 +283,11 @@ class SedapalBuscadorInteractivo:
             pagina = 1
             total_pagados = 0
             
-            while pagina <= 10:  # Límite para Render
+            while pagina <= 8:  # Límite reducido para Render
                 payload_pagados = {
                     "nis_rad": nis_rad_correcto,
                     "page_num": pagina,
-                    "page_size": 50  # Reducido para Render
+                    "page_size": 40  # Reducido para optimizar memoria
                 }
                 
                 try:
@@ -263,7 +316,7 @@ class SedapalBuscadorInteractivo:
                         
                         print(f"   📄 Página {pagina}: {len(recibos_pagados)} recibos")
                         
-                        if len(recibos_pagados) < 50:
+                        if len(recibos_pagados) < 40:
                             break
                         
                         pagina += 1
@@ -289,16 +342,16 @@ class SedapalBuscadorInteractivo:
             
             todos_los_recibos.sort(key=extraer_fecha)
             
-            # 4. Tomar los últimos 40
-            ultimos_40 = todos_los_recibos[-40:] if len(todos_los_recibos) > 40 else todos_los_recibos
+            # 4. Tomar los últimos 30 (optimizado para Render)
+            ultimos_30 = todos_los_recibos[-30:] if len(todos_los_recibos) > 30 else todos_los_recibos
             
             print(f"📊 RESUMEN:")
             print(f"   📦 Total recibos encontrados: {len(todos_los_recibos)}")
-            print(f"   📋 Mostrando últimos: {len(ultimos_40)}")
-            if ultimos_40:
-                print(f"   📅 Rango: {ultimos_40[0]['f_fact']} → {ultimos_40[-1]['f_fact']}")
+            print(f"   📋 Mostrando últimos: {len(ultimos_30)}")
+            if ultimos_30:
+                print(f"   📅 Rango: {ultimos_30[0]['f_fact']} → {ultimos_30[-1]['f_fact']}")
             
-            self.recibos_completos = ultimos_40
+            self.recibos_completos = ultimos_30
             return True
             
         except Exception as e:
@@ -427,8 +480,9 @@ if __name__ == "__main__":
     EMAIL = "francovas2407@hotmail.com"
     PASSWORD = "Atilio123"
     
-    print("🎯 SEDAPAL BUSCADOR - VERSIÓN RENDER")
+    print("🎯 SEDAPAL BUSCADOR - VERSIÓN RENDER FINAL")
     print("🔧 Optimizado para contenedores Docker")
+    print("✅ Sin WebDriverManager - Solo sistema")
     print()
     
     buscador = SedapalBuscadorInteractivo(EMAIL, PASSWORD)
