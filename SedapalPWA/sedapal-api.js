@@ -1,9 +1,9 @@
 class SedapalAPISimple {
     constructor() {
-        // ✅ Detectar entorno
+        // ✅ Usar Vercel en lugar de Railway
         this.pythonURL = window.location.hostname === 'localhost' 
-            ? 'http://localhost:5000'      // Desarrollo local
-            : '';                          // Producción (mismo dominio)
+            ? 'http://localhost:5000'                    // Desarrollo local
+            : '';                                        // Vercel (mismo dominio)
         
         console.log('🌐 Entorno:', window.location.hostname);
         console.log('🔗 API URL:', this.pythonURL || 'Vercel Functions');
