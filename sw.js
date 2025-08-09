@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sedapal-pwa-v4';
+const CACHE_NAME = 'sedapal-pwa-v7';
 const urlsToCache = [
     './',
     './index.html',
@@ -20,53 +20,18 @@ self.addEventListener('install', function(event) {
 });
 
 // Activar Service Worker
-self.addEventListener('activate', function(event) {
-    console.log('✅ Service Worker: Activado');
-    event.waitUntil(
-        caches.keys().then(function(cacheNames) {
-            return Promise.all(
-                cacheNames.map(function(cacheName) {
-                    if (cacheName !== CACHE_NAME) {
-                        console.log('🗑️ Service Worker: Eliminando cache viejo:', cacheName);
-                        return caches.delete(cacheName);
-                    }
-                })
-            );
-        })
-    );
+self.addEventListener('activate', e => {
+  e.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
+    )
+  );
+  console.log('✅ Service Worker: Activado');
 });
 
 // Interceptar requests
-self.addEventListener('fetch', function(event) {
-    event.respondWith(
-        caches.match(event.request)
-            .then(function(response) {
-                // Cache hit - devolver respuesta del cache
-                if (response) {
-                    console.log('📄 Service Worker: Sirviendo desde cache:', event.request.url);
-                    return response;
-                }
-
-                // Si no está en cache, hacer fetch normal
-                console.log('🌐 Service Worker: Fetch desde red:', event.request.url);
-                return fetch(event.request).then(function(response) {
-                    // Verificar si recibimos una respuesta válida
-                    if (!response || response.status !== 200 || response.type !== 'basic') {
-                        return response;
-                    }
-
-                    // Clonar la respuesta
-                    var responseToCache = response.clone();
-
-                    caches.open(CACHE_NAME)
-                        .then(function(cache) {
-                            cache.put(event.request, responseToCache);
-                        });
-
-                    return response;
-                });
-            })
-    );
+self.addEventListener('fetch', e => {
+  e.respondWith(caches.match(e.request).then(r => r || fetch(e.request)));
 });
 
 // Escuchar mensajes

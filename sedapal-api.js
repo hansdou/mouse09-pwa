@@ -1,127 +1,77 @@
 class SedapalAPISimple {
- constructor() {
-    // SIEMPRE usar el backend de Render
+  constructor() {
     this.pythonURL = 'https://sedapal-backend.onrender.com';
-    
-    console.log('🌐 Entorno:', window.location.hostname);
     console.log('🔗 API URL:', this.pythonURL);
-    this.verificarConexion();
-}
+  }
 
-    async verificarConexion() {
-        try {
-            console.log('🔍 Verificando conexión...');
-            const response = await fetch(`${this.pythonURL}/api/test`);
-            const data = await response.json();
-            console.log('✅ Backend conectado:', data.message);
-            return true;
-        } catch (error) {
-            console.log('⚠️ Backend no disponible:', error.message);
-            return false;
-        }
+  async verificarConexion() {
+    try {
+      const r = await fetch(`${this.pythonURL}/api/test`);
+      const d = await r.json();
+      console.log('✅ Backend conectado:', d.mode || d.message);
+      return true;
+    } catch (e) {
+      console.log('⚠️ Backend no disponible:', e.message);
+      return false;
     }
+  }
 
-    async buscarRecibos(suministro) {
-        try {
-            console.log(`🔍 Buscando recibos REALES: ${suministro}`);
-            
-            const response = await fetch(`${this.pythonURL}/api/recibos/${suministro}`);
-            
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            
-            const data = await response.json();
-            
-            if (data.success) {
-                console.log(`✅ ${data.total} recibos REALES obtenidos`);
-                console.log(`📊 Fuente: ${data.fuente}`);
-                return {
-                    success: true,
-                    recibos: data.recibos,
-                    total: data.total,
-                    mensaje: data.message,
-                    esReal: true
-                };
-            } else {
-                throw new Error(data.error);
-            }
-            
-        } catch (error) {
-            console.error('❌ Error backend:', error.message);
-            console.log('🧪 Fallback: Datos simulados...');
-            
-            return {
-                success: true,
-                recibos: this.generarDatosPrueba(suministro),
-                total: 5,
-                mensaje: "🧪 Datos simulados (backend no disponible)",
-                esReal: false
-            };
-        }
+  async buscarRecibos(nis) {
+    try {
+      const clean = String(nis).replace(/\D+/g, '');
+      const r = await fetch(`${this.pythonURL}/api/recibos/${clean}`);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const d = await r.json();
+
+      if (d && d.ok === true && Array.isArray(d.items)) {
+        const lista = d.items.map((it, i) => ({
+          ...it,
+          index: i + 1,
+          periodo: it.mes || it.f_fact || '',
+          es_deuda: (it.estado || it.est_rec || '').toLowerCase().includes('impag'),
+          color_estado: (it.estado || it.est_rec || '').toLowerCase().includes('impag') ? '🟡 PENDIENTE' : '✅ PAGADO',
+          datos_reales: true,
+          fuente: d.source || 'SEDAPAL_HTTP',
+        }));
+        return { success: true, recibos: lista, total: lista.length, esReal: true };
+      }
+
+      if (d && d.success && Array.isArray(d.recibos)) {
+        return { success: true, recibos: d.recibos, total: d.total ?? d.recibos.length, esReal: true };
+      }
+
+      throw new Error('Respuesta desconocida del backend');
+    } catch (e) {
+      console.error('❌ Error backend:', e.message);
+      return { success: true, recibos: this.generarDatosPrueba(nis), total: 5, esReal: false };
     }
+  }
 
-    async descargarPDF(recibo) {
-        try {
-            console.log('📄 Descargando PDF...', recibo.recibo);
-            
-            // ✅ INTENTAR PDF REAL PRIMERO
-            if (recibo.datos_reales) {
-                console.log('📄 Intentando PDF REAL de SEDAPAL...');
-                
-                const response = await fetch(`${this.pythonURL}/api/pdf/${recibo.nis_rad}/${recibo.recibo}`);
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    
-                    if (data.success && data.pdf_base64) {
-                        console.log('✅ PDF REAL obtenido de SEDAPAL');
-                        
-                        // Convertir base64 a blob y descargar
-                        const pdfBytes = atob(data.pdf_base64);
-                        const byteArray = new Uint8Array(pdfBytes.length);
-                        for (let i = 0; i < pdfBytes.length; i++) {
-                            byteArray[i] = pdfBytes.charCodeAt(i);
-                        }
-                        
-                        const blob = new Blob([byteArray], { type: 'application/pdf' });
-                        const url = URL.createObjectURL(blob);
-                        
-                        const link = document.createElement('a');
-                        link.href = url;
-                        link.download = data.filename || `SEDAPAL_${recibo.recibo}.pdf`;
-                        document.body.appendChild(link);
-                        link.click();
-                        document.body.removeChild(link);
-                        
-                        setTimeout(() => URL.revokeObjectURL(url), 5000);
-                        
-                        return {
-                            success: true,
-                            type: 'real',
-                            message: '✅ PDF REAL descargado de SEDAPAL',
-                            filename: data.filename,
-                            tamaño: data.tamaño
-                        };
-                    }
-                }
-            }
-            
-            // ✅ FALLBACK: PDF SIMULADO
-            console.log('📄 Generando PDF simulado...');
-            return await this.generarPDFMejorado(recibo);
-            
-        } catch (error) {
-            console.error('❌ Error PDF:', error);
-            return await this.generarPDFMejorado(recibo);
-        }
+  async descargarPDF(recibo) {
+    try {
+      const r = await fetch(`${this.pythonURL}/api/pdf/${recibo.nis_rad}/${recibo.recibo}`);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `SEDAPAL_${recibo.recibo}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+      return { success: true };
+    } catch (e) {
+      console.error('❌ Error PDF:', e.message);
+      return await this.generarPDFMejorado(recibo);
     }
+  }
 
-    async generarPDFMejorado(recibo) {
-        const fecha = new Date().toLocaleDateString('es-PE');
-        
-        // PDF simulado pero más realista
-        const pdfContent = `%PDF-1.4
+  async generarPDFMejorado(recibo) {
+    const fecha = new Date().toLocaleDateString('es-PE');
+    
+    // PDF simulado pero más realista
+    const pdfContent = `%PDF-1.4
 1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj
 2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj
 3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 612 792]/Contents 4 0 R>>endobj
@@ -148,59 +98,59 @@ xref 0 5
 0000000000 65535 f 0000000009 00000 n 0000000058 00000 n 0000000115 00000 n 0000000206 00000 n 
 trailer<</Size 5/Root 1 0 R>>startxref 629 %%EOF`;
 
-        const blob = new Blob([pdfContent], { type: 'application/pdf' });
-        const url = URL.createObjectURL(blob);
-        
-        const link = document.createElement('a');
-        link.href = url;
-        link.target = '_blank';
-        link.download = `SEDAPAL_${recibo.recibo}_${recibo.f_fact || fecha}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        
-        setTimeout(() => URL.revokeObjectURL(url), 5000);
-        
-        return { 
-            success: true, 
-            type: 'simulado',
-            filename: `SEDAPAL_${recibo.recibo}.pdf`,
-            message: '📄 PDF simulado generado (para PDF real usar modo local)'
-        };
-    }
+    const blob = new Blob([pdfContent], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.target = '_blank';
+    link.download = `SEDAPAL_${recibo.recibo}_${recibo.f_fact || fecha}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    
+    return { 
+        success: true, 
+        type: 'simulado',
+        filename: `SEDAPAL_${recibo.recibo}.pdf`,
+        message: '📄 PDF simulado generado (para PDF real usar modo local)'
+    };
+  }
 
-    generarDatosPrueba(suministro) {
-        console.log('🧪 Generando datos simulados para:', suministro);
-        
-        const recibos = [];
-        const fechas = [
-            { mes: 'Enero 2024', f_fact: '2024-01-15', vencimiento: '2024-02-15' },
-            { mes: 'Febrero 2024', f_fact: '2024-02-15', vencimiento: '2024-03-15' },
-            { mes: 'Marzo 2024', f_fact: '2024-03-15', vencimiento: '2024-04-15' },
-            { mes: 'Abril 2024', f_fact: '2024-04-15', vencimiento: '2024-05-15' },
-            { mes: 'Mayo 2024', f_fact: '2024-05-15', vencimiento: '2024-06-15' }
-        ];
-        
-        fechas.forEach((periodo, i) => {
-            recibos.push({
-                recibo: `${suministro}${String(i + 1).padStart(2, '0')}`,
-                color_estado: i === 0 ? '🟡 PENDIENTE' : '✅ PAGADO',
-                f_fact: periodo.f_fact,
-                vencimiento: periodo.vencimiento,
-                total_fact: (Math.random() * 100 + 30).toFixed(2),
-                periodo: periodo.mes,
-                estado: i === 0 ? 'Pendiente' : 'Pagado',
-                nis_rad: parseInt(suministro),
-                tipo_recibo: 'Simulado',
-                es_deuda: i === 0,
-                datos_reales: false,
-                fuente: 'SIMULACION PWA',
-                index: i + 1
-            });
+  generarDatosPrueba(suministro) {
+    console.log('🧪 Generando datos simulados para:', suministro);
+    
+    const recibos = [];
+    const fechas = [
+        { mes: 'Enero 2024', f_fact: '2024-01-15', vencimiento: '2024-02-15' },
+        { mes: 'Febrero 2024', f_fact: '2024-02-15', vencimiento: '2024-03-15' },
+        { mes: 'Marzo 2024', f_fact: '2024-03-15', vencimiento: '2024-04-15' },
+        { mes: 'Abril 2024', f_fact: '2024-04-15', vencimiento: '2024-05-15' },
+        { mes: 'Mayo 2024', f_fact: '2024-05-15', vencimiento: '2024-06-15' }
+    ];
+    
+    fechas.forEach((periodo, i) => {
+        recibos.push({
+            recibo: `${suministro}${String(i + 1).padStart(2, '0')}`,
+            color_estado: i === 0 ? '🟡 PENDIENTE' : '✅ PAGADO',
+            f_fact: periodo.f_fact,
+            vencimiento: periodo.vencimiento,
+            total_fact: (Math.random() * 100 + 30).toFixed(2),
+            periodo: periodo.mes,
+            estado: i === 0 ? 'Pendiente' : 'Pagado',
+            nis_rad: parseInt(suministro),
+            tipo_recibo: 'Simulado',
+            es_deuda: i === 0,
+            datos_reales: false,
+            fuente: 'SIMULACION PWA',
+            index: i + 1
         });
-        
-        return recibos.reverse(); // Más recientes primero
-    }
+    });
+    
+    return recibos.reverse(); // Más recientes primero
+  }
 }
 
 window.sedapalAPI = new SedapalAPISimple();
