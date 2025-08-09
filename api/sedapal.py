@@ -1,104 +1,204 @@
-from flask import Flask, jsonify
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+import sys
 import os
+import base64
+import tempfile
 from datetime import datetime
-import random
+
+# Agregar el directorio donde está encontrarpdf.py
+sys.path.append('/app')  # En Railway
+
+# Importar TU clase que SÍ funciona
+from encontrarpdf import SedapalBuscadorInteractivo
 
 app = Flask(__name__)
+CORS(app)
 
 # Credenciales desde variables de entorno
-EMAIL = os.environ.get('SEDAPAL_EMAIL', 'francovas2407@hotmail.com')
-PASSWORD = os.environ.get('SEDAPAL_PASSWORD', 'Atilio123')
+EMAIL = os.environ.get('SEDAPAL_EMAIL')
+PASSWORD = os.environ.get('SEDAPAL_PASSWORD')
+PORT = int(os.environ.get('PORT', 5000))
+
+print(f"🚀 === RAILWAY BACKEND REAL INICIANDO ===")
+print(f"🔑 EMAIL configurado: {EMAIL is not None}")
+print(f"🔑 PASSWORD configurado: {PASSWORD is not None}")
 
 @app.route('/api/test', methods=['GET'])
 def test():
     return jsonify({
         "success": True,
-        "message": "🚀 SEDAPAL API funcionando en Vercel",
+        "message": "🔥 RAILWAY con DATOS REALES funcionando",
         "timestamp": datetime.now().isoformat(),
-        "email_configured": EMAIL is not None
+        "email_configured": EMAIL is not None,
+        "encontrarpdf_available": True,
+        "backend_type": "REAL_DATA_RAILWAY"
     })
 
 @app.route('/api/recibos/<suministro>', methods=['GET'])
-def obtener_recibos_vercel(suministro):
-    """Generar datos realistas para Vercel (sin Selenium)"""
+def obtener_recibos_reales(suministro):
+    """USA DIRECTAMENTE tu encontrarpdf.py para datos REALES"""
+    buscador = None
     try:
-        print(f"🔍 Generando recibos para suministro: {suministro}")
+        print(f"\n🔍 === BÚSQUEDA REAL RAILWAY ===")
+        print(f"📋 Suministro: {suministro}")
+        print(f"🔑 Email: {EMAIL}")
         
-        # Datos más realistas para Vercel
-        recibos_realistas = []
+        if not EMAIL or not PASSWORD:
+            return jsonify({"error": "Credenciales no configuradas en Railway"}), 500
         
-        periodos = [
-            {"mes": "Diciembre 2024", "f_fact": "2024-12-15", "vencimiento": "2025-01-15"},
-            {"mes": "Noviembre 2024", "f_fact": "2024-11-15", "vencimiento": "2024-12-15"},
-            {"mes": "Octubre 2024", "f_fact": "2024-10-15", "vencimiento": "2024-11-15"},
-            {"mes": "Septiembre 2024", "f_fact": "2024-09-15", "vencimiento": "2024-10-15"},
-            {"mes": "Agosto 2024", "f_fact": "2024-08-15", "vencimiento": "2024-09-15"},
-        ]
+        # Crear buscador con TUS credenciales REALES
+        buscador = SedapalBuscadorInteractivo(EMAIL, PASSWORD)
         
-        for i, periodo in enumerate(periodos):
-            monto = round(random.uniform(35.50, 95.80), 2)
-            recibo_num = f"{suministro}{str(i+15).zfill(2)}"
+        print("🌐 Configurando navegador para Railway...")
+        if not buscador.configurar_driver():
+            return jsonify({"error": "Error configurando navegador en Railway"}), 500
+        
+        print("🔐 Haciendo login REAL a SEDAPAL...")
+        if not buscador.login_automatico():
+            return jsonify({"error": "Error en login REAL - credenciales incorrectas"}), 500
+        
+        print("📋 Obteniendo recibos REALES de SEDAPAL...")
+        if buscador.obtener_todos_los_recibos(suministro):
             
-            recibo = {
-                "recibo": recibo_num,
-                "color_estado": "🟡 PENDIENTE" if i == 0 else "✅ PAGADO",
-                "f_fact": periodo["f_fact"],
-                "vencimiento": periodo["vencimiento"],
-                "total_fact": str(monto),
-                "periodo": periodo["mes"],
-                "estado": "Pendiente" if i == 0 else "Pagado",
-                "nis_rad": int(suministro),
-                "tipo_recibo": "Consumo de agua",
-                "es_deuda": i == 0,
-                "datos_reales": True,  # ✅ Marcar como reales para PDFs
-                "fuente": "VERCEL REALISTA",
-                "index": i + 1
-            }
-            recibos_realistas.append(recibo)
-        
-        print(f"✅ {len(recibos_realistas)} recibos generados")
-        
-        return jsonify({
-            "success": True,
-            "recibos": recibos_realistas,
-            "total": len(recibos_realistas),
-            "message": f"✅ {len(recibos_realistas)} recibos obtenidos",
-            "fuente": "Vercel Realista"
-        })
-        
+            # Convertir TUS recibos REALES al formato PWA
+            recibos_para_pwa = []
+            for i, recibo in enumerate(buscador.recibos_completos):
+                recibo_pwa = {
+                    "recibo": recibo.get('recibo', f'REC-{i+1}'),
+                    "color_estado": recibo.get('color_estado', '📄'),
+                    "f_fact": recibo.get('f_fact', ''),
+                    "vencimiento": recibo.get('vencimiento', ''),
+                    "total_fact": str(recibo.get('total_fact', 0)),
+                    "periodo": recibo.get('mes', ''),
+                    "estado": recibo.get('estado_pago', ''),
+                    "nis_rad": int(suministro),
+                    "tipo_recibo": "Consumo de agua",
+                    "es_deuda": recibo.get('es_deuda', False),
+                    "datos_reales": True,  # ✅ 100% REAL
+                    "fuente": "RAILWAY + ENCONTRARPDF.PY - 100% REAL",
+                    "index": i + 1
+                }
+                recibos_para_pwa.append(recibo_pwa)
+            
+            recibos_para_pwa.reverse()  # Más recientes primero
+            
+            print(f"✅ {len(recibos_para_pwa)} recibos REALES obtenidos exitosamente")
+            
+            return jsonify({
+                "success": True,
+                "recibos": recibos_para_pwa,
+                "total": len(recibos_para_pwa),
+                "message": f"✅ {len(recibos_para_pwa)} recibos REALES de SEDAPAL",
+                "fuente": "RAILWAY REAL DATA"
+            })
+        else:
+            return jsonify({"error": f"No se encontraron recibos para suministro {suministro}"}), 404
+            
     except Exception as e:
-        print(f"❌ ERROR: {e}")
-        return jsonify({"error": str(e)}), 500
+        print(f"❌ ERROR REAL: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            "error": str(e),
+            "details": "Error obteniendo datos REALES de SEDAPAL",
+            "suministro": suministro
+        }), 500
+        
+    finally:
+        if buscador and hasattr(buscador, 'driver') and buscador.driver:
+            try:
+                buscador.driver.quit()
+                print("🔒 Navegador cerrado correctamente")
+            except:
+                pass
 
 @app.route('/api/pdf/<suministro>/<recibo_id>', methods=['GET'])
-def generar_pdf_vercel(suministro, recibo_id):
-    """PDF simplificado para Vercel"""
+def descargar_pdf_real_railway(suministro, recibo_id):
+    """PDF REAL usando encontrarpdf.py en Railway"""
+    buscador = None
     try:
-        import base64
+        print(f"\n📄 === DESCARGA PDF REAL RAILWAY ===")
+        print(f"📋 Suministro: {suministro}")
+        print(f"🧾 Recibo ID: {recibo_id}")
         
-        # PDF básico pero funcional
-        pdf_content = f"""Recibo SEDAPAL #{recibo_id}
-Suministro: {suministro}
-Generado desde Vercel
-Fecha: {datetime.now().strftime('%Y-%m-%d %H:%M')}
-"""
+        # Mismo código que funciona en local
+        buscador = SedapalBuscadorInteractivo(EMAIL, PASSWORD)
         
-        pdf_base64 = base64.b64encode(pdf_content.encode()).decode()
+        if not buscador.configurar_driver():
+            return jsonify({"error": "Error configurando navegador"}), 500
         
-        return jsonify({
-            "success": True,
-            "pdf_base64": pdf_base64,
-            "filename": f"SEDAPAL_{recibo_id}.pdf",
-            "message": "PDF generado desde Vercel",
-            "fuente": "Vercel Functions"
-        })
+        if not buscador.login_automatico():
+            return jsonify({"error": "Error en login"}), 500
         
+        if not buscador.obtener_todos_los_recibos(suministro):
+            return jsonify({"error": "Error obteniendo lista de recibos"}), 500
+        
+        # Buscar el índice correcto del recibo
+        indice_recibo = None
+        for i, recibo in enumerate(buscador.recibos_completos):
+            if str(recibo.get('recibo')) == str(recibo_id):
+                indice_recibo = i + 1
+                break
+        
+        if not indice_recibo:
+            return jsonify({"error": f"Recibo {recibo_id} no encontrado"}), 404
+        
+        # Crear directorio temporal
+        temp_dir = tempfile.mkdtemp()
+        original_dir = os.getcwd()
+        
+        try:
+            os.chdir(temp_dir)
+            print(f"🔄 Descargando PDF REAL usando índice #{indice_recibo}...")
+            
+            # ✅ USAR ENCONTRARPDF.PY REAL
+            resultado = buscador.descargar_pdf_recibo(indice_recibo)
+            
+            if resultado:
+                # Buscar archivo PDF generado
+                archivos_pdf = [f for f in os.listdir('.') if f.endswith('.pdf')]
+                
+                if archivos_pdf:
+                    archivo_pdf = archivos_pdf[0]
+                    
+                    with open(archivo_pdf, 'rb') as f:
+                        pdf_bytes = f.read()
+                        pdf_base64 = base64.b64encode(pdf_bytes).decode('utf-8')
+                    
+                    if len(pdf_bytes) > 5000:  # PDF real
+                        return jsonify({
+                            "success": True,
+                            "pdf_base64": pdf_base64,
+                            "filename": archivo_pdf,
+                            "message": "PDF REAL descargado de SEDAPAL",
+                            "tamaño": len(pdf_bytes),
+                            "fuente": "RAILWAY + SEDAPAL REAL",
+                            "tipo": "PDF_REAL_SEDAPAL"
+                        })
+                        
+        finally:
+            os.chdir(original_dir)
+            import shutil
+            try:
+                shutil.rmtree(temp_dir)
+            except:
+                pass
+                
     except Exception as e:
+        print(f"❌ ERROR PDF: {e}")
         return jsonify({"error": str(e)}), 500
-
-# Para Vercel
-def handler(request):
-    return app(request.environ, lambda *args: None)
+        
+    finally:
+        if buscador and hasattr(buscador, 'driver') and buscador.driver:
+            try:
+                buscador.driver.quit()
+            except:
+                pass
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    print("🔥 === RAILWAY BACKEND REAL INICIANDO ===")
+    print(f"📧 Email: {EMAIL}")
+    print(f"🔑 Password configurado: {PASSWORD is not None}")
+    print(f"🌐 Puerto: {PORT}")
+    app.run(host='0.0.0.0', port=PORT, debug=False)
