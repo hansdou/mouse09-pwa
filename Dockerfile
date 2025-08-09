@@ -55,28 +55,9 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copiar código de la aplicación
-COPY . .
+COPY api ./api
 
-# Variables de entorno para Chrome y Selenium
-ENV DISPLAY=:99
-ENV CHROME_BIN=/usr/bin/google-chrome
-ENV CHROMEDRIVER_PATH=/usr/bin/chromedriver
-ENV PYTHONPATH=/app
-ENV PORT=5000
-
-# ✅ CREAR DIRECTORIOS PARA DESCARGAS Y TEMPORALES
-RUN mkdir -p /tmp/sedapal_pdfs /tmp/chromedriver_downloads \
-    && chmod 777 /tmp/sedapal_pdfs /tmp/chromedriver_downloads /tmp
-
-# Dar permisos ejecutables
-RUN chmod +x /usr/bin/google-chrome \
-    && chmod +x /usr/bin/chromedriver || true
-
-# Verificar estructura del proyecto
-RUN ls -la /app/
-RUN ls -la /app/api/
-
-EXPOSE 5000
+EXPOSE 8000
 
 # ✅ TIMEOUT AUMENTADO PARA CHROME SETUP
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--timeout", "180", "--workers", "1", "api.sedapal:app"]
+CMD ["sh","-c","uvicorn api.app:app --host 0.0.0.0 --port $PORT"]
