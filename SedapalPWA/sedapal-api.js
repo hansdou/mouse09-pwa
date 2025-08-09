@@ -1,121 +1,85 @@
 class SedapalAPISimple {
  constructor() {
-    // SIEMPRE usar el backend de Render
-    this.pythonURL = 'https://sedapal-backend.onrender.com';
-    
-    console.log('🌐 Entorno:', window.location.hostname);
-    console.log('🔗 API URL:', this.pythonURL);
-    this.verificarConexion();
+  // SIEMPRE usar el backend de Render
+  this.pythonURL = 'https://sedapal-backend.onrender.com';
+  console.log('🌐 Entorno:', window.location.hostname);
+  console.log('🔗 API URL:', this.pythonURL);
+  this.verificarConexion();
 }
 
     async verificarConexion() {
-        try {
-            console.log('🔍 Verificando conexión...');
-            const response = await fetch(`${this.pythonURL}/api/test`);
-            const data = await response.json();
-            console.log('✅ Backend conectado:', data.message);
-            return true;
-        } catch (error) {
-            console.log('⚠️ Backend no disponible:', error.message);
-            return false;
-        }
-    }
+  try {
+    console.log('🔍 Verificando conexión...');
+    const response = await fetch(`${this.pythonURL}/api/test`);
+    const data = await response.json();
+    console.log('✅ Backend conectado:', data.mode || data.message || JSON.stringify(data));
+    return true;
+  } catch (error) {
+    console.log('⚠️ Backend no disponible:', error.message);
+    return false;
+  }
+}
 
     async buscarRecibos(suministro) {
-        try {
-            console.log(`🔍 Buscando recibos REALES: ${suministro}`);
-            
-            const response = await fetch(`${this.pythonURL}/api/recibos/${suministro}`);
-            
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            
-            const data = await response.json();
-            
-            if (data.success) {
-                console.log(`✅ ${data.total} recibos REALES obtenidos`);
-                console.log(`📊 Fuente: ${data.fuente}`);
-                return {
-                    success: true,
-                    recibos: data.recibos,
-                    total: data.total,
-                    mensaje: data.message,
-                    esReal: true
-                };
-            } else {
-                throw new Error(data.error);
-            }
-            
-        } catch (error) {
-            console.error('❌ Error backend:', error.message);
-            console.log('🧪 Fallback: Datos simulados...');
-            
-            return {
-                success: true,
-                recibos: this.generarDatosPrueba(suministro),
-                total: 5,
-                mensaje: "🧪 Datos simulados (backend no disponible)",
-                esReal: false
-            };
-        }
+  try {
+    console.log(`🔍 Buscando recibos REALES: ${suministro}`);
+    const response = await fetch(`${this.pythonURL}/api/recibos/${suministro}`);
+    if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    const data = await response.json();
+
+    // Nueva API HTTP-direct (ok + items)
+    if (data && data.ok === true && Array.isArray(data.items)) {
+      const lista = data.items.map((it, idx) => ({
+        ...it,
+        periodo: it.mes || it.f_fact || '',
+        es_deuda: (it.estado || it.est_rec || '').toLowerCase().includes('impag'),
+        color_estado: (it.estado || it.est_rec || '').toLowerCase().includes('impag') ? '🟡 PENDIENTE' : '✅ PAGADO',
+        datos_reales: true,
+        fuente: data.source || 'SEDAPAL_HTTP',
+        index: idx + 1,
+      }));
+      return { success: true, recibos: lista, total: lista.length, mensaje: 'OK', esReal: true };
     }
 
-    async descargarPDF(recibo) {
-        try {
-            console.log('📄 Descargando PDF...', recibo.recibo);
-            
-            // ✅ INTENTAR PDF REAL PRIMERO
-            if (recibo.datos_reales) {
-                console.log('📄 Intentando PDF REAL de SEDAPAL...');
-                
-                const response = await fetch(`${this.pythonURL}/api/pdf/${recibo.nis_rad}/${recibo.recibo}`);
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    
-                    if (data.success && data.pdf_base64) {
-                        console.log('✅ PDF REAL obtenido de SEDAPAL');
-                        
-                        // Convertir base64 a blob y descargar
-                        const pdfBytes = atob(data.pdf_base64);
-                        const byteArray = new Uint8Array(pdfBytes.length);
-                        for (let i = 0; i < pdfBytes.length; i++) {
-                            byteArray[i] = pdfBytes.charCodeAt(i);
-                        }
-                        
-                        const blob = new Blob([byteArray], { type: 'application/pdf' });
-                        const url = URL.createObjectURL(blob);
-                        
-                        const link = document.createElement('a');
-                        link.href = url;
-                        link.download = data.filename || `SEDAPAL_${recibo.recibo}.pdf`;
-                        document.body.appendChild(link);
-                        link.click();
-                        document.body.removeChild(link);
-                        
-                        setTimeout(() => URL.revokeObjectURL(url), 5000);
-                        
-                        return {
-                            success: true,
-                            type: 'real',
-                            message: '✅ PDF REAL descargado de SEDAPAL',
-                            filename: data.filename,
-                            tamaño: data.tamaño
-                        };
-                    }
-                }
-            }
-            
-            // ✅ FALLBACK: PDF SIMULADO
-            console.log('📄 Generando PDF simulado...');
-            return await this.generarPDFMejorado(recibo);
-            
-        } catch (error) {
-            console.error('❌ Error PDF:', error);
-            return await this.generarPDFMejorado(recibo);
-        }
+    // Compatibilidad con backend anterior (success + recibos)
+    if (data && data.success && Array.isArray(data.recibos)) {
+      return { success: true, recibos: data.recibos, total: data.total ?? data.recibos.length, mensaje: data.message, esReal: true };
     }
+
+    throw new Error('Respuesta desconocida del backend');
+  } catch (error) {
+    console.error('❌ Error backend:', error.message);
+    console.log('🧪 Fallback: Datos simulados...');
+    return {
+      success: true,
+      recibos: this.generarDatosPrueba(suministro),
+      total: 5,
+      mensaje: '🧪 Datos simulados (backend no disponible)',
+      esReal: false
+    };
+  }
+}
+
+    async descargarPDF(recibo) {
+  try {
+    console.log('📄 Descargando PDF REAL...', recibo.recibo);
+    const response = await fetch(`${this.pythonURL}/api/pdf/${recibo.nis_rad}/${recibo.recibo}`);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `SEDAPAL_${recibo.recibo}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    return { success: true, type: 'real', message: '✅ PDF REAL descargado' };
+  } catch (error) {
+    console.error('❌ Error PDF:', error.message);
+    return await this.generarPDFMejorado(recibo);
+  }
+}
 
     async generarPDFMejorado(recibo) {
         const fecha = new Date().toLocaleDateString('es-PE');
