@@ -15,6 +15,11 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
 from datetime import datetime
 import os
+import sys
+
+sys.path.append('/app')  # En Railway
+sys.path.append('/app')  # Backup
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + '/..')  # Directorio padre
 
 class SedapalBuscadorInteractivo:
     def __init__(self, email, password):
