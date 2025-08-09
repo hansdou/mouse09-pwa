@@ -6,7 +6,7 @@ import base64
 import tempfile
 from datetime import datetime
 
-# ✅ ARREGLO PARA RAILWAY:
+# ✅ ARREGLO PARA RENDER:
 sys.path.append('/app')
 sys.path.append('.')
 sys.path.append('..')
@@ -28,7 +28,7 @@ EMAIL = os.environ.get('SEDAPAL_EMAIL')
 PASSWORD = os.environ.get('SEDAPAL_PASSWORD')
 PORT = int(os.environ.get('PORT', 5000))
 
-print(f"🚀 === RAILWAY BACKEND REAL INICIANDO ===")
+print(f"🚀 === RENDER BACKEND REAL INICIANDO ===")
 print(f"🔑 EMAIL configurado: {EMAIL is not None}")
 print(f"🔑 PASSWORD configurado: {PASSWORD is not None}")
 
@@ -36,30 +36,34 @@ print(f"🔑 PASSWORD configurado: {PASSWORD is not None}")
 def test():
     return jsonify({
         "success": True,
-        "message": "🔥 RAILWAY con DATOS REALES funcionando",
+        "message": "🔥 RENDER con DATOS REALES funcionando",
         "timestamp": datetime.now().isoformat(),
         "email_configured": EMAIL is not None,
-        "encontrarpdf_available": True,
-        "backend_type": "REAL_DATA_RAILWAY"
+        "encontrarpdf_available": SedapalBuscadorInteractivo is not None,
+        "backend_type": "REAL_DATA_RENDER"
     })
 
 @app.route('/api/recibos/<suministro>', methods=['GET'])
 def obtener_recibos_reales(suministro):
+    buscador = None
     try:
+        print(f"\n🔍 === BÚSQUEDA REAL RENDER ===")
+        print(f"📋 Suministro: {suministro}")
+        print(f"🔑 Email: {EMAIL}")
+        
+        if not EMAIL or not PASSWORD:
+            return jsonify({"error": "Credenciales no configuradas en Render"}), 500
+        
         # ✅ VERIFICAR SI SE IMPORTÓ
         if SedapalBuscadorInteractivo is None:
             return jsonify({"error": "encontrarpdf.py no se pudo importar"}), 500
         
-        print(f"\n🔍 === BÚSQUEDA REAL RAILWAY ===")
-        print(f"📋 Suministro: {suministro}")
-        print(f"🔑 Email: {EMAIL}")
+        # Crear buscador con TUS credenciales REALES
+        buscador = SedapalBuscadorInteractivo(EMAIL, PASSWORD)
         
         print("🌐 Configurando navegador para Render...")
         if not buscador.configurar_driver():
             return jsonify({"error": "Error configurando navegador en Render"}), 500
-        
-        if not EMAIL or not PASSWORD:
-            return jsonify({"error": "Credenciales no configuradas en Render"}), 500
         
         print("🔐 Haciendo login REAL a SEDAPAL...")
         if not buscador.login_automatico():
@@ -121,13 +125,16 @@ def obtener_recibos_reales(suministro):
                 pass
 
 @app.route('/api/pdf/<suministro>/<recibo_id>', methods=['GET'])
-def descargar_pdf_real_railway(suministro, recibo_id):
-    """PDF REAL usando encontrarpdf.py en Railway"""
+def descargar_pdf_real_render(suministro, recibo_id):
+    """PDF REAL usando encontrarpdf.py en RENDER"""
     buscador = None
     try:
-        print(f"\n📄 === DESCARGA PDF REAL RAILWAY ===")
+        print(f"\n📄 === DESCARGA PDF REAL RENDER ===")
         print(f"📋 Suministro: {suministro}")
         print(f"🧾 Recibo ID: {recibo_id}")
+        
+        if not EMAIL or not PASSWORD:
+            return jsonify({"error": "Credenciales no configuradas"}), 500
         
         # Mismo código que funciona en local
         buscador = SedapalBuscadorInteractivo(EMAIL, PASSWORD)
@@ -180,7 +187,7 @@ def descargar_pdf_real_railway(suministro, recibo_id):
                             "filename": archivo_pdf,
                             "message": "PDF REAL descargado de SEDAPAL",
                             "tamaño": len(pdf_bytes),
-                            "fuente": "RAILWAY + SEDAPAL REAL",
+                            "fuente": "RENDER + SEDAPAL REAL",
                             "tipo": "PDF_REAL_SEDAPAL"
                         })
                         
@@ -204,7 +211,7 @@ def descargar_pdf_real_railway(suministro, recibo_id):
                 pass
 
 if __name__ == '__main__':
-    print("🔥 === RAILWAY BACKEND REAL INICIANDO ===")
+    print("🔥 === RENDER BACKEND REAL INICIANDO ===")
     print(f"📧 Email: {EMAIL}")
     print(f"🔑 Password configurado: {PASSWORD is not None}")
     print(f"🌐 Puerto: {PORT}")
