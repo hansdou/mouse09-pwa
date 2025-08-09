@@ -1,9 +1,8 @@
 from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
-from api.http_sedapal import SedapalHTTP
-import os
 
-app = FastAPI(title="SEDAPAL Backend (HTTP)")
+app = FastAPI(title="SEDAPAL Backend")
+
 origins = [
     "http://localhost:8080",
     "https://hansdou.github.io",
@@ -12,8 +11,8 @@ origins = [
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
+    allow_credentials=False,
+    allow_methods=["GET", "HEAD", "OPTIONS"],
     allow_headers=["*"],
 )
 
