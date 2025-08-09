@@ -60,6 +60,7 @@
                         <button class="chip" data-numero="2061720">2061720</button>
                         <button class="chip" data-numero="5297349">5297349</button>
                         <button class="chip" data-numero="3631439">3631439</button>
+                        <button class="chip" data-numero="4004435">4004435</button>
                     </div>
                     
                     <!-- Search Button -->
@@ -87,94 +88,111 @@
             </div>
         </div>
     </div>
-    
-    <!-- Service Worker Registration -->
+
+    <!-- ✅ SERVICE WORKER CORREGIDO - DETECTA ENTORNO AUTOMÁTICAMENTE -->
     <script>
-        // Registrar Service Worker
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function() {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(function(registration) {
-                        console.log('✅ Service Worker registrado:', registration.scope);
-                    })
-                    .catch(function(error) {
-                        console.log('❌ Error registrando Service Worker:', error);
-                    });
-            });
-        }
-
-        // Detectar si está instalado como PWA
-        window.addEventListener('beforeinstallprompt', function(e) {
-            console.log('📱 PWA se puede instalar');
-            // Prevenir que Chrome 67 y anteriores muestren automáticamente el prompt
-            e.preventDefault();
-            
-            // Guardar el evento para poder mostrarlo después
-            window.deferredPrompt = e;
-            
-            // Mostrar botón de instalación personalizado
-            showInstallButton();
+        // ✅ Detectar entorno automáticamente
+        const isLocal = window.location.protocol === 'file:';
+        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        
+        console.log('🔍 Entorno detectado:', {
+            protocol: window.location.protocol,
+            hostname: window.location.hostname,
+            isLocal: isLocal,
+            isLocalhost: isLocalhost
         });
 
-        function showInstallButton() {
-            // Agregar botón de instalación si no existe
-            if (!document.getElementById('install-button')) {
-                const installBtn = document.createElement('button');
-                installBtn.id = 'install-button';
-                installBtn.textContent = '📱 Instalar App';
-                installBtn.style.cssText = `
-                    position: fixed;
-                    top: 10px;
-                    right: 10px;
-                    background: #4CAF50;
-                    color: white;
-                    border: none;
-                    padding: 10px 15px;
-                    border-radius: 8px;
-                    font-size: 14px;
-                    font-weight: bold;
-                    cursor: pointer;
-                    z-index: 1000;
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-                `;
-                
-                installBtn.addEventListener('click', function() {
-                    if (window.deferredPrompt) {
-                        window.deferredPrompt.prompt();
-                        window.deferredPrompt.userChoice.then(function(choiceResult) {
-                            if (choiceResult.outcome === 'accepted') {
-                                console.log('✅ Usuario aceptó instalar PWA');
-                            } else {
-                                console.log('❌ Usuario rechazó instalar PWA');
-                            }
-                            window.deferredPrompt = null;
-                            installBtn.remove();
+        // ✅ Solo habilitar PWA features en servidor HTTP
+        if (!isLocal) {
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                    navigator.serviceWorker.register('./sw.js')
+                        .then(function(registration) {
+                            console.log('✅ Service Worker registrado:', registration.scope);
+                            console.log('📱 PWA features habilitadas');
+                        })
+                        .catch(function(error) {
+                            console.log('❌ Error registrando Service Worker:', error);
                         });
-                    }
                 });
-                
-                document.body.appendChild(installBtn);
             }
+        } else {
+            console.log('🔧 Modo desarrollo local - PWA features deshabilitadas');
+            console.log('💡 Para PWA completa usar: python -m http.server 8080');
         }
 
-        // Detectar cuando la app se ejecuta como PWA instalada
-        window.addEventListener('appinstalled', function(evt) {
-            console.log('🎉 PWA instalada exitosamente');
-            const installBtn = document.getElementById('install-button');
-            if (installBtn) {
-                installBtn.remove();
-            }
-        });
+        // ✅ Debug info
+        console.log('🌐 Protocolo:', window.location.protocol);
+        console.log('🔗 URL completa:', window.location.href);
 
-        // Verificar si ya está ejecutándose como PWA
-        if (window.matchMedia('(display-mode: standalone)').matches) {
-            console.log('📱 Ejecutándose como PWA instalada');
+        // ✅ PWA Install Prompt (solo para servidores HTTP)
+        if (!isLocal) {
+            window.addEventListener('beforeinstallprompt', function(e) {
+                console.log('📱 PWA se puede instalar');
+                e.preventDefault();
+                window.deferredPrompt = e;
+                showInstallButton();
+            });
+
+            function showInstallButton() {
+                if (!document.getElementById('install-button')) {
+                    const installBtn = document.createElement('button');
+                    installBtn.id = 'install-button';
+                    installBtn.textContent = '📱 Instalar App';
+                    installBtn.style.cssText = `
+                        position: fixed;
+                        top: 10px;
+                        right: 10px;
+                        background: #4CAF50;
+                        color: white;
+                        border: none;
+                        padding: 10px 15px;
+                        border-radius: 8px;
+                        font-size: 14px;
+                        font-weight: bold;
+                        cursor: pointer;
+                        z-index: 1000;
+                        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                    `;
+                    
+                    installBtn.addEventListener('click', function() {
+                        if (window.deferredPrompt) {
+                            window.deferredPrompt.prompt();
+                            window.deferredPrompt.userChoice.then(function(choiceResult) {
+                                if (choiceResult.outcome === 'accepted') {
+                                    console.log('✅ Usuario aceptó instalar PWA');
+                                } else {
+                                    console.log('❌ Usuario rechazó instalar PWA');
+                                }
+                                window.deferredPrompt = null;
+                                installBtn.remove();
+                            });
+                        }
+                    });
+                    
+                    document.body.appendChild(installBtn);
+                }
+            }
+
+            // Detectar cuando la app se ejecuta como PWA instalada
+            window.addEventListener('appinstalled', function(evt) {
+                console.log('🎉 PWA instalada exitosamente');
+                const installBtn = document.getElementById('install-button');
+                if (installBtn) {
+                    installBtn.remove();
+                }
+            });
+
+            // Verificar si ya está ejecutándose como PWA
+            if (window.matchMedia('(display-mode: standalone)').matches) {
+                console.log('📱 Ejecutándose como PWA instalada');
+            }
         }
     </script>
 
     <!-- Scripts existentes -->
     <script src="./sedapal-api.js"></script>
-  <!--  <script src="./app.js"></script> -->
+    <!-- <script src="./app.js"></script> -->
     <script src="./main.js"></script>
 </body>
 </html>

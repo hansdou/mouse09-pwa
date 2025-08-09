@@ -8,12 +8,25 @@ class SedapalPWA {
     initializeApp() {
         console.log('🚀 Inicializando SEDAPAL PWA...');
         
-        // Esperar a que cargue la página
-        document.addEventListener('DOMContentLoaded', () => {
-            this.setupEventListeners();
-            this.updateStatus();
-            console.log('✅ PWA inicializada');
-        });
+        // ✅ Esperar DOM y mostrar app
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', this.showApp.bind(this));
+        } else {
+            this.showApp();
+        }
+    }
+
+    showApp() {
+        // Ocultar loading
+        const loading = document.getElementById('loading');
+        const mainApp = document.getElementById('main-app');
+        
+        if (loading) loading.style.display = 'none';
+        if (mainApp) mainApp.style.display = 'block';
+        
+        this.setupEventListeners();
+        this.updateStatus();
+        console.log('✅ PWA mostrada');
     }
 
     setupEventListeners() {

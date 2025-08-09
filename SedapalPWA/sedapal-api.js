@@ -1,14 +1,12 @@
 class SedapalAPISimple {
-    constructor() {
-        // ✅ CORREGIR: Usar tu backend REAL de Render
-        this.pythonURL = window.location.hostname === 'localhost' 
-            ? 'http://localhost:5000'
-            : 'https://sedapal-backend.onrender.com';  // ✅ TU BACKEND REAL
-        
-        console.log('🌐 Entorno:', window.location.hostname);
-        console.log('🔗 API URL:', this.pythonURL);
-        this.verificarConexion();
-    }
+ constructor() {
+    // SIEMPRE usar el backend de Render
+    this.pythonURL = 'https://sedapal-backend.onrender.com';
+    
+    console.log('🌐 Entorno:', window.location.hostname);
+    console.log('🔗 API URL:', this.pythonURL);
+    this.verificarConexion();
+}
 
     async verificarConexion() {
         try {
