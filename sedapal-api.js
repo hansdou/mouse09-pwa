@@ -19,9 +19,14 @@ class SedapalAPISimple {
   async buscarRecibos(nis) {
     try {
       const clean = String(nis).replace(/\D+/g, '');
+<<<<<<< Updated upstream
       const r = await fetch(`${this.pythonURL}/api/recibos/${clean}`);
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const d = await r.json();
+=======
+      console.log(`🔍 Buscando recibos REALES: ${clean}`);
+      const r = await fetch(`${this.pythonURL}/api/recibos/${clean}?t=${Date.now()}`, { cache: 'no-store' });
+>>>>>>> Stashed changes
 
       if (d && d.ok === true && Array.isArray(d.items)) {
         const lista = d.items.map((it, i) => ({
