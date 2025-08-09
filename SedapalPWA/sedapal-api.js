@@ -1,12 +1,12 @@
 class SedapalAPISimple {
     constructor() {
-        // ✅ Usar Vercel en lugar de Railway
+        // ✅ CORREGIR: Usar tu backend REAL de Render
         this.pythonURL = window.location.hostname === 'localhost' 
-            ? 'http://localhost:5000'                    // Desarrollo local
-            : '';                                        // Vercel (mismo dominio)
+            ? 'http://localhost:5000'
+            : 'https://sedapal-backend.onrender.com';  // ✅ TU BACKEND REAL
         
         console.log('🌐 Entorno:', window.location.hostname);
-        console.log('🔗 API URL:', this.pythonURL || 'Vercel Functions');
+        console.log('🔗 API URL:', this.pythonURL);
         this.verificarConexion();
     }
 
@@ -16,57 +16,101 @@ class SedapalAPISimple {
             const response = await fetch(`${this.pythonURL}/api/test`);
             const data = await response.json();
             console.log('✅ Backend conectado:', data.message);
+            return true;
         } catch (error) {
-            console.log('⚠️ Backend no disponible, usando modo simulado');
+            console.log('⚠️ Backend no disponible:', error.message);
+            return false;
         }
     }
 
     async buscarRecibos(suministro) {
         try {
-            console.log(`🔍 Buscando recibos: ${suministro}`);
-            console.log(`📡 URL: ${this.pythonURL}/api/recibos/${suministro}`);
+            console.log(`🔍 Buscando recibos REALES: ${suministro}`);
             
             const response = await fetch(`${this.pythonURL}/api/recibos/${suministro}`);
             
             if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: Backend no disponible`);
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
             
             const data = await response.json();
             
             if (data.success) {
-                console.log(`✅ ${data.total} recibos obtenidos de ${data.fuente}`);
-                return data.recibos;
+                console.log(`✅ ${data.total} recibos REALES obtenidos`);
+                console.log(`📊 Fuente: ${data.fuente}`);
+                return {
+                    success: true,
+                    recibos: data.recibos,
+                    total: data.total,
+                    mensaje: data.message,
+                    esReal: true
+                };
             } else {
                 throw new Error(data.error);
             }
             
         } catch (error) {
             console.error('❌ Error backend:', error.message);
-            console.log('🧪 Fallback: Generando datos simulados...');
-            return this.generarDatosPrueba(suministro);
+            console.log('🧪 Fallback: Datos simulados...');
+            
+            return {
+                success: true,
+                recibos: this.generarDatosPrueba(suministro),
+                total: 5,
+                mensaje: "🧪 Datos simulados (backend no disponible)",
+                esReal: false
+            };
         }
     }
 
     async descargarPDF(recibo) {
         try {
-            console.log('📄 Intentando PDF real...');
+            console.log('📄 Descargando PDF...', recibo.recibo);
             
-            if (recibo.datos_reales) {  // ← Permitir en ambos entornos
-                // En producción, PDF real solo si el backend funciona
+            // ✅ INTENTAR PDF REAL PRIMERO
+            if (recibo.datos_reales) {
+                console.log('📄 Intentando PDF REAL de SEDAPAL...');
+                
                 const response = await fetch(`${this.pythonURL}/api/pdf/${recibo.nis_rad}/${recibo.recibo}`);
                 
                 if (response.ok) {
                     const data = await response.json();
-                    if (data.success) {
-                        // Código de descarga real...
-                        return this.procesarPDFReal(data, recibo);
+                    
+                    if (data.success && data.pdf_base64) {
+                        console.log('✅ PDF REAL obtenido de SEDAPAL');
+                        
+                        // Convertir base64 a blob y descargar
+                        const pdfBytes = atob(data.pdf_base64);
+                        const byteArray = new Uint8Array(pdfBytes.length);
+                        for (let i = 0; i < pdfBytes.length; i++) {
+                            byteArray[i] = pdfBytes.charCodeAt(i);
+                        }
+                        
+                        const blob = new Blob([byteArray], { type: 'application/pdf' });
+                        const url = URL.createObjectURL(blob);
+                        
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = data.filename || `SEDAPAL_${recibo.recibo}.pdf`;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        
+                        setTimeout(() => URL.revokeObjectURL(url), 5000);
+                        
+                        return {
+                            success: true,
+                            type: 'real',
+                            message: '✅ PDF REAL descargado de SEDAPAL',
+                            filename: data.filename,
+                            tamaño: data.tamaño
+                        };
                     }
                 }
             }
             
-            // Fallback a PDF simulado mejorado
-            console.log('📄 Generando PDF simulado mejorado...');
+            // ✅ FALLBACK: PDF SIMULADO
+            console.log('📄 Generando PDF simulado...');
             return await this.generarPDFMejorado(recibo);
             
         } catch (error) {
@@ -162,4 +206,4 @@ trailer<</Size 5/Root 1 0 R>>startxref 629 %%EOF`;
 }
 
 window.sedapalAPI = new SedapalAPISimple();
-console.log('📱 sedapal-api.js v5.0 - Con fallback simulado mejorado');
+console.log('📱 sedapal-api.js v6.0 - RENDER BACKEND REAL');

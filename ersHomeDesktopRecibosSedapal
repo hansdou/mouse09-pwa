@@ -1,0 +1,157 @@
+[1mdiff --git a/SedapalPWA/index.html b/SedapalPWA/index.html[m
+[1mindex 821d004..85e7c05 100644[m
+[1m--- a/SedapalPWA/index.html[m
+[1m+++ b/SedapalPWA/index.html[m
+[36m@@ -48,7 +48,7 @@[m
+                     <!-- Test Input -->[m
+                     <input [m
+                         type="number" [m
+[31m-                        id="suministro-input"[m
+[32m+[m[32m                        id="suministro"[m
+                         class="test-input"[m
+                         placeholder="🧪 Ingrese su suministro"[m
+                         maxlength="10"[m
+[36m@@ -174,6 +174,7 @@[m
+ [m
+     <!-- Scripts existentes -->[m
+     <script src="./sedapal-api.js"></script>[m
+[31m-    <script src="./app.js"></script>[m
+[32m+[m[32m  <!--  <script src="./app.js"></script> -->[m
+[32m+[m[32m    <script src="./main.js"></script>[m
+ </body>[m
+ </html>[m
+\ No newline at end of file[m
+[1mdiff --git a/SedapalPWA/sedapal-api.js b/SedapalPWA/sedapal-api.js[m
+[1mindex fcfccdc..6322905 100644[m
+[1m--- a/SedapalPWA/sedapal-api.js[m
+[1m+++ b/SedapalPWA/sedapal-api.js[m
+[36m@@ -1,12 +1,12 @@[m
+ class SedapalAPISimple {[m
+     constructor() {[m
+[31m-        // ✅ Usar Vercel en lugar de Railway[m
+[32m+[m[32m        // ✅ CORREGIR: Usar tu backend REAL de Render[m
+         this.pythonURL = window.location.hostname === 'localhost' [m
+[31m-            ? 'http://localhost:5000'                    // Desarrollo local[m
+[31m-            : '';                                        // Vercel (mismo dominio)[m
+[32m+[m[32m            ? 'http://localhost:5000'[m
+[32m+[m[32m            : 'https://sedapal-backend.onrender.com';  // ✅ TU BACKEND REAL[m
+         [m
+         console.log('🌐 Entorno:', window.location.hostname);[m
+[31m-        console.log('🔗 API URL:', this.pythonURL || 'Vercel Functions');[m
+[32m+[m[32m        console.log('🔗 API URL:', this.pythonURL);[m
+         this.verificarConexion();[m
+     }[m
+ [m
+[36m@@ -16,57 +16,101 @@[m [mclass SedapalAPISimple {[m
+             const response = await fetch(`${this.pythonURL}/api/test`);[m
+             const data = await response.json();[m
+             console.log('✅ Backend conectado:', data.message);[m
+[32m+[m[32m            return true;[m
+         } catch (error) {[m
+[31m-            console.log('⚠️ Backend no disponible, usando modo simulado');[m
+[32m+[m[32m            console.log('⚠️ Backend no disponible:', error.message);[m
+[32m+[m[32m            return false;[m
+         }[m
+     }[m
+ [m
+     async buscarRecibos(suministro) {[m
+         try {[m
+[31m-            console.log(`🔍 Buscando recibos: ${suministro}`);[m
+[31m-            console.log(`📡 URL: ${this.pythonURL}/api/recibos/${suministro}`);[m
+[32m+[m[32m            console.log(`🔍 Buscando recibos REALES: ${suministro}`);[m
+             [m
+             const response = await fetch(`${this.pythonURL}/api/recibos/${suministro}`);[m
+             [m
+             if (!response.ok) {[m
+[31m-                throw new Error(`HTTP ${response.status}: Backend no disponible`);[m
+[32m+[m[32m                throw new Error(`HTTP ${response.status}: ${response.statusText}`);[m
+             }[m
+             [m
+             const data = await response.json();[m
+             [m
+             if (data.success) {[m
+[31m-                console.log(`✅ ${data.total} recibos obtenidos de ${data.fuente}`);[m
+[31m-                return data.recibos;[m
+[32m+[m[32m                console.log(`✅ ${data.total} recibos REALES obtenidos`);[m
+[32m+[m[32m                console.log(`📊 Fuente: ${data.fuente}`);[m
+[32m+[m[32m                return {[m
+[32m+[m[32m                    success: true,[m
+[32m+[m[32m                    recibos: data.recibos,[m
+[32m+[m[32m                    total: data.total,[m
+[32m+[m[32m                    mensaje: data.message,[m
+[32m+[m[32m                    esReal: true[m
+[32m+[m[32m                };[m
+             } else {[m
+                 throw new Error(data.error);[m
+             }[m
+             [m
+         } catch (error) {[m
+             console.error('❌ Error backend:', error.message);[m
+[31m-            console.log('🧪 Fallback: Generando datos simulados...');[m
+[31m-            return this.generarDatosPrueba(suministro);[m
+[32m+[m[32m            console.log('🧪 Fallback: Datos simulados...');[m
+[32m+[m[41m            [m
+[32m+[m[32m            return {[m
+[32m+[m[32m                success: true,[m
+[32m+[m[32m                recibos: this.generarDatosPrueba(suministro),[m
+[32m+[m[32m                total: 5,[m
+[32m+[m[32m                mensaje: "🧪 Datos simulados (backend no disponible)",[m
+[32m+[m[32m                esReal: false[m
+[32m+[m[32m            };[m
+         }[m
+     }[m
+ [m
+     async descargarPDF(recibo) {[m
+         try {[m
+[31m-            console.log('📄 Intentando PDF real...');[m
+[32m+[m[32m            console.log('📄 Descargando PDF...', recibo.recibo);[m
+             [m
+[31m-            if (recibo.datos_reales) {  // ← Permitir en ambos entornos[m
+[31m-                // En producción, PDF real solo si el backend funciona[m
+[32m+[m[32m            // ✅ INTENTAR PDF REAL PRIMERO[m
+[32m+[m[32m            if (recibo.datos_reales) {[m
+[32m+[m[32m                console.log('📄 Intentando PDF REAL de SEDAPAL...');[m
+[32m+[m[41m                [m
+                 const response = await fetch(`${this.pythonURL}/api/pdf/${recibo.nis_rad}/${recibo.recibo}`);[m
+                 [m
+                 if (response.ok) {[m
+                     const data = await response.json();[m
+[31m-                    if (data.success) {[m
+[31m-                        // Código de descarga real...[m
+[31m-                        return this.procesarPDFReal(data, recibo);[m
+[32m+[m[41m                    [m
+[32m+[m[32m                    if (data.success && data.pdf_base64) {[m
+[32m+[m[32m                        console.log('✅ PDF REAL obtenido de SEDAPAL');[m
+[32m+[m[41m                        [m
+[32m+[m[32m                        // Convertir base64 a blob y descargar[m
+[32m+[m[32m                        const pdfBytes = atob(data.pdf_base64);[m
+[32m+[m[32m                        const byteArray = new Uint8Array(pdfBytes.length);[m
+[32m+[m[32m                        for (let i = 0; i < pdfBytes.length; i++) {[m
+[32m+[m[32m                            byteArray[i] = pdfBytes.charCodeAt(i);[m
+[32m+[m[32m                        }[m
+[32m+[m[41m                        [m
+[32m+[m[32m                        const blob = new Blob([byteArray], { type: 'application/pdf' });[m
+[32m+[m[32m                        const url = URL.createObjectURL(blob);[m
+[32m+[m[41m                        [m
+[32m+[m[32m                        const link = document.createElement('a');[m
+[32m+[m[32m                        link.href = url;[m
+[32m+[m[32m                        link.download = data.filename || `SEDAPAL_${recibo.recibo}.pdf`;[m
+[32m+[m[32m                        document.body.appendChild(link);[m
+[32m+[m[32m                        link.click();[m
+[32m+[m[32m                        document.body.removeChild(link);[m
+[32m+[m[41m                        [m
+[32m+[m[32m                        setTimeout(() => URL.revokeObjectURL(url), 5000);[m
+[32m+[m[41m                        [m
+[32m+[m[32m                        return {[m
+[32m+[m[32m                            success: true,[m
+[32m+[m[32m                            type: 'real',[m
+[32m+[m[32m                            message: '✅ PDF REAL descargado de SEDAPAL',[m
+[32m+[m[32m                            filename: data.filename,[m
+[32m+[m[32m                            tamaño: data.tamaño[m
+[32m+[m[32m                        };[m
+                     }[m
+                 }[m
+             }[m
+             [m
+[31m-            // Fallback a PDF simulado mejorado[m
+[31m-            cons
