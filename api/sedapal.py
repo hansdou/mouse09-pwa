@@ -6,12 +6,19 @@ import base64
 import tempfile
 from datetime import datetime
 
-# Agregar el directorio donde está encontrarpdf.py
-sys.path.append('/app')  # En Railway
-sys.path.append('.')     # En local
+# ✅ ARREGLO PARA RAILWAY:
+sys.path.append('/app')
+sys.path.append('.')
+sys.path.append('..')
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + '/..')
 
-# Importar TU clase que SÍ funciona
-from encontrarpdf import SedapalBuscadorInteractivo
+try:
+    from encontrarpdf import SedapalBuscadorInteractivo
+    print("✅ encontrarpdf.py importado exitosamente")
+except ImportError as e:
+    print(f"❌ ERROR IMPORTANDO encontrarpdf.py: {e}")
+    # Continuar sin crash
+    SedapalBuscadorInteractivo = None
 
 app = Flask(__name__)
 CORS(app)
@@ -38,9 +45,11 @@ def test():
 
 @app.route('/api/recibos/<suministro>', methods=['GET'])
 def obtener_recibos_reales(suministro):
-    """USA DIRECTAMENTE tu encontrarpdf.py para datos REALES"""
-    buscador = None
     try:
+        # ✅ VERIFICAR SI SE IMPORTÓ
+        if SedapalBuscadorInteractivo is None:
+            return jsonify({"error": "encontrarpdf.py no se pudo importar"}), 500
+        
         print(f"\n🔍 === BÚSQUEDA REAL RAILWAY ===")
         print(f"📋 Suministro: {suministro}")
         print(f"🔑 Email: {EMAIL}")
