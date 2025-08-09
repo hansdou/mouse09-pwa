@@ -1,0 +1,14 @@
+<svg width="192" height="192" viewBox="0 0 192 192" xmlns="http://www.w3.org/2000/svg">
+  <!-- Fondo -->
+  <rect width="192" height="192" fill="#E91E63" rx="20"/>
+  
+  <!-- Círculo blanco -->
+  <circle cx="96" cy="96" r="70" fill="white"/>
+  
+  <!-- Gota de agua -->
+  <path d="M96 40 C76 60, 76 80, 96 100 C116 80, 116 60, 96 40 Z" fill="#2196F3"/>
+  <circle cx="96" cy="95" r="25" fill="#2196F3"/>
+  
+  <!-- Texto -->
+  <text x="96" y="140" text-anchor="middle" fill="#E91E63" font-family="Arial, sans-serif" font-size="16" font-weight="bold">SEDAPAL</text>
+</svg>
