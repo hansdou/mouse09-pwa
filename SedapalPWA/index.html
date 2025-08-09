@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>SEDAPAL - Recibos de Agua</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#E91E63">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="SEDAPAL">
+    
+    <!-- Manifest -->
+    <link rel="manifest" href="./manifest.json">
+    
+    <!-- Icons -->
+    <link rel="apple-touch-icon" href="./icons/icon-192.png">
+    <link rel="icon" type="image/png" href="./icons/icon-32.png">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Loading inicial -->
+        <div id="loading" class="loading-container">
+            <div class="spinner"></div>
+            <p>Conectando con SEDAPAL...</p>
+        </div>
+        
+        <!-- App principal -->
+        <div id="main-app" style="display: none;">
+            <!-- Debug panel (como tu HomeScreen.js) -->
+            <div id="debug-panel" class="debug-panel">
+                <div class="debug-text">🔍 DEBUG: <span id="debug-info">Iniciando...</span></div>
+                <div class="debug-text">📱 PWA - Navegador: <span id="browser-info"></span></div>
+                <div class="debug-text">🎯 Suministro: "<span id="suministro-debug"></span>"</div>
+            </div>
+            
+            <!-- Scroll container -->
+            <div class="scroll-container">
+                <!-- Test container (igual que tu HomeScreen.js) -->
+                <div class="test-container">
+                    <h2 class="test-title">🚰 SEDAPAL - PWA</h2>
+                    <p class="test-subtitle">Versión Web App para iPhone</p>
+                    
+                    <!-- Test Input -->
+                    <input 
+                        type="number" 
+                        id="suministro-input"
+                        class="test-input"
+                        placeholder="🧪 Ingrese su suministro"
+                        maxlength="10"
+                    >
+                    
+                    <!-- Test Chips -->
+                    <div class="chips-container">
+                        <p class="chips-title">🔢 Números frecuentes:</p>
+                        <button class="chip" data-numero="2061720">2061720</button>
+                        <button class="chip" data-numero="5297349">5297349</button>
+                        <button class="chip" data-numero="3631439">3631439</button>
+                    </div>
+                    
+                    <!-- Search Button -->
+                    <button id="search-btn" class="search-button">
+                        🔍 BUSCAR RECIBOS
+                    </button>
+                </div>
+                
+                <!-- Error container -->
+                <div id="error-container" class="error-container" style="display: none;">
+                    <p id="error-text"></p>
+                </div>
+                
+                <!-- Loading container -->
+                <div id="search-loading" class="loading-search" style="display: none;">
+                    <div class="spinner-small"></div>
+                    <p>Buscando recibos...</p>
+                </div>
+                
+                <!-- Results container -->
+                <div id="results-container" class="results-container" style="display: none;">
+                    <h3 id="results-title"></h3>
+                    <div id="recibos-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Service Worker Registration -->
+    <script>
+        // Registrar Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(function(registration) {
+                        console.log('✅ Service Worker registrado:', registration.scope);
+                    })
+                    .catch(function(error) {
+                        console.log('❌ Error registrando Service Worker:', error);
+                    });
+            });
+        }
+
+        // Detectar si está instalado como PWA
+        window.addEventListener('beforeinstallprompt', function(e) {
+            console.log('📱 PWA se puede instalar');
+            // Prevenir que Chrome 67 y anteriores muestren automáticamente el prompt
+            e.preventDefault();
+            
+            // Guardar el evento para poder mostrarlo después
+            window.deferredPrompt = e;
+            
+            // Mostrar botón de instalación personalizado
+            showInstallButton();
+        });
+
+        function showInstallButton() {
+            // Agregar botón de instalación si no existe
+            if (!document.getElementById('install-button')) {
+                const installBtn = document.createElement('button');
+                installBtn.id = 'install-button';
+                installBtn.textContent = '📱 Instalar App';
+                installBtn.style.cssText = `
+                    position: fixed;
+                    top: 10px;
+                    right: 10px;
+                    background: #4CAF50;
+                    color: white;
+                    border: none;
+                    padding: 10px 15px;
+                    border-radius: 8px;
+                    font-size: 14px;
+                    font-weight: bold;
+                    cursor: pointer;
+                    z-index: 1000;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                `;
+                
+                installBtn.addEventListener('click', function() {
+                    if (window.deferredPrompt) {
+                        window.deferredPrompt.prompt();
+                        window.deferredPrompt.userChoice.then(function(choiceResult) {
+                            if (choiceResult.outcome === 'accepted') {
+                                console.log('✅ Usuario aceptó instalar PWA');
+                            } else {
+                                console.log('❌ Usuario rechazó instalar PWA');
+                            }
+                            window.deferredPrompt = null;
+                            installBtn.remove();
+                        });
+                    }
+                });
+                
+                document.body.appendChild(installBtn);
+            }
+        }
+
+        // Detectar cuando la app se ejecuta como PWA instalada
+        window.addEventListener('appinstalled', function(evt) {
+            console.log('🎉 PWA instalada exitosamente');
+            const installBtn = document.getElementById('install-button');
+            if (installBtn) {
+                installBtn.remove();
+            }
+        });
+
+        // Verificar si ya está ejecutándose como PWA
+        if (window.matchMedia('(display-mode: standalone)').matches) {
+            console.log('📱 Ejecutándose como PWA instalada');
+        }
+    </script>
+
+    <!-- Scripts existentes -->
+    <script src="./sedapal-api.js"></script>
+    <script src="./app.js"></script>
+</body>
+</html>

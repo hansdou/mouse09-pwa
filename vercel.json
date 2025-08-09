@@ -1,0 +1,27 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "SedapalPWA/**",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "api/sedapal.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/sedapal.py"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/SedapalPWA/$1"
+    }
+  ],
+  "env": {
+    "SEDAPAL_EMAIL": "francovas2407@hotmail.com",
+    "SEDAPAL_PASSWORD": "Atilio123"
+  }
+}
