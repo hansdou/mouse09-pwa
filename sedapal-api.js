@@ -16,18 +16,16 @@ class SedapalAPISimple {
     }
   }
 
-  async buscarRecibos(suministro) {
+  async buscarRecibos(nis) {
     try {
-      const clean = String(suministro).replace(/\D+/g, ''); // solo dígitos
+      const clean = String(nis).replace(/\D+/g, '');
       console.log(`🔍 Buscando recibos REALES: ${clean}`);
-
       const r = await fetch(`${this.pythonURL}/api/recibos/${clean}`, { cache: 'no-store' });
 
       if (!r.ok) {
         const txt = await r.text().catch(()=>'');
         throw new Error(`HTTP ${r.status} ${r.statusText} :: ${txt.slice(0,200)}`);
       }
-
       const ct = (r.headers.get('content-type') || '').toLowerCase();
       if (!ct.includes('application/json')) {
         const txt = await r.text().catch(()=>'');
@@ -35,34 +33,30 @@ class SedapalAPISimple {
       }
 
       const data = await r.json();
+      console.log('🧩 Respuesta backend:', data);
 
       if (data && data.ok === true && Array.isArray(data.items)) {
-        const lista = data.items.map((it, idx) => ({
+        const lista = data.items.map((it, i) => ({
           ...it,
+          index: i + 1,
           periodo: it.mes || it.f_fact || '',
           es_deuda: (it.estado || it.est_rec || '').toLowerCase().includes('impag'),
           color_estado: (it.estado || it.est_rec || '').toLowerCase().includes('impag') ? '🟡 PENDIENTE' : '✅ PAGADO',
           datos_reales: true,
           fuente: data.source || 'SEDAPAL_HTTP',
-          index: idx + 1,
         }));
-        return { success: true, recibos: lista, total: lista.length, mensaje: 'OK', esReal: true };
+        return { success: true, recibos: lista, total: lista.length, esReal: true };
       }
 
+      // compatibilidad legado
       if (data && data.success && Array.isArray(data.recibos)) {
-        return { success: true, recibos: data.recibos, total: data.total ?? data.recibos.length, mensaje: data.message, esReal: true };
+        return { success: true, recibos: data.recibos, total: data.total ?? data.recibos.length, esReal: true };
       }
 
       throw new Error('Respuesta desconocida del backend');
-    } catch (error) {
-      console.error('❌ Error backend:', error?.message || error);
-      return {
-        success: true,
-        recibos: this.generarDatosPrueba(suministro),
-        total: 5,
-        mensaje: '🧪 Datos simulados (backend no disponible)',
-        esReal: false
-      };
+    } catch (e) {
+      console.error('❌ Error backend:', e?.message || e);
+      return { success: true, recibos: this.generarDatosPrueba(nis), total: 5, esReal: false };
     }
   }
 

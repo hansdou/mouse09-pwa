@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sedapal-pwa-v2'; // sube versión para forzar actualización
+const CACHE_NAME = 'sedapal-pwa-v10'; // sube versión para forzar actualización
 const urlsToCache = [
     './',
     './index.html',
@@ -25,6 +25,11 @@ self.addEventListener('install', function(event) {
 
 // Interceptar requests
 self.addEventListener('fetch', function(event) {
+    const url = event.request.url || '';
+    if (url.startsWith('https://sedapal-backend.onrender.com')) {
+        event.respondWith(fetch(event.request)); // siempre red para API
+        return;
+    }
     event.respondWith(
         caches.match(event.request)
             .then(function(response) {
