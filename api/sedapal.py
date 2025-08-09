@@ -54,15 +54,12 @@ def obtener_recibos_reales(suministro):
         print(f"📋 Suministro: {suministro}")
         print(f"🔑 Email: {EMAIL}")
         
-        if not EMAIL or not PASSWORD:
-            return jsonify({"error": "Credenciales no configuradas en Railway"}), 500
-        
-        # Crear buscador con TUS credenciales REALES
-        buscador = SedapalBuscadorInteractivo(EMAIL, PASSWORD)
-        
-        print("🌐 Configurando navegador para Railway...")
+        print("🌐 Configurando navegador para Render...")
         if not buscador.configurar_driver():
-            return jsonify({"error": "Error configurando navegador en Railway"}), 500
+            return jsonify({"error": "Error configurando navegador en Render"}), 500
+        
+        if not EMAIL or not PASSWORD:
+            return jsonify({"error": "Credenciales no configuradas en Render"}), 500
         
         print("🔐 Haciendo login REAL a SEDAPAL...")
         if not buscador.login_automatico():
@@ -86,7 +83,7 @@ def obtener_recibos_reales(suministro):
                     "tipo_recibo": "Consumo de agua",
                     "es_deuda": recibo.get('es_deuda', False),
                     "datos_reales": True,  # ✅ 100% REAL
-                    "fuente": "RAILWAY + ENCONTRARPDF.PY - 100% REAL",
+                    "fuente": "RENDER + ENCONTRARPDF.PY - 100% REAL",
                     "index": i + 1
                 }
                 recibos_para_pwa.append(recibo_pwa)
@@ -100,7 +97,7 @@ def obtener_recibos_reales(suministro):
                 "recibos": recibos_para_pwa,
                 "total": len(recibos_para_pwa),
                 "message": f"✅ {len(recibos_para_pwa)} recibos REALES de SEDAPAL",
-                "fuente": "RAILWAY REAL DATA"
+                "fuente": "RENDER REAL DATA"
             })
         else:
             return jsonify({"error": f"No se encontraron recibos para suministro {suministro}"}), 404
