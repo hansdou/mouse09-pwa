@@ -8,6 +8,7 @@ from datetime import datetime
 
 # Agregar el directorio donde está encontrarpdf.py
 sys.path.append('/app')  # En Railway
+sys.path.append('.')     # En local
 
 # Importar TU clase que SÍ funciona
 from encontrarpdf import SedapalBuscadorInteractivo
@@ -202,15 +203,3 @@ if __name__ == '__main__':
     print(f"🔑 Password configurado: {PASSWORD is not None}")
     print(f"🌐 Puerto: {PORT}")
     app.run(host='0.0.0.0', port=PORT, debug=False)
-def configurar_driver(self):
-    try:
-        print("🌐 Configurando Chrome...")
-        
-        chrome_options = Options()
-        chrome_options.add_argument('--headless')
-        
-        # ✅ AGREGAR SOLO ESTAS 2 LÍNEAS:
-        chrome_options.add_argument('--no-sandbox')
-        chrome_options.add_argument('--disable-dev-shm-usage')
-        
-        # ... resto de tu código igual, NO cambiar nada más ...
