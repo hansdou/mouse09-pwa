@@ -13,8 +13,13 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
-from datetime import datetime
+from datetime import datetime   
 import os
+import sys
+
+sys.path.append('/app')  # En Railway
+sys.path.append('/app')  # Backup
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + '/..')  # Directorio padre
 
 class SedapalBuscadorInteractivo:
     def __init__(self, email, password):
@@ -58,6 +63,7 @@ class SedapalBuscadorInteractivo:
             chrome_options.add_argument('--disable-dev-shm-usage')
             chrome_options.add_argument('--disable-gpu')
             chrome_options.add_argument('--remote-debugging-port=9222')
+            chrome_options.binary_location = '/usr/bin/google-chrome'
             
             # Resto igual...
             from webdriver_manager.chrome import ChromeDriverManager
