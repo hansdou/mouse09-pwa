@@ -34,15 +34,22 @@ class SedapalAPISimple {
 
       const d = await r.json();
       if (d && d.ok === true && Array.isArray(d.items)) {
-        const lista = d.items.map((it,i)=>({
-          ...it,
-          index:i+1,
-          periodo: it.mes || it.f_fact || '',
-          es_deuda: (it.estado || it.est_rec || '').toLowerCase().includes('impag'),
-          color_estado: (it.estado || it.est_rec || '').toLowerCase().includes('impag') ? '🟡 PENDIENTE':'✅ PAGADO',
-          datos_reales:true,
-          fuente: d.source || 'SEDAPAL_HTTP',
-        }));
+        const lista = d.items.map((it, i) => {
+  // Normaliza estado
+  const estado = (it.estado || it.est_rec || '').toLowerCase();
+  const es_deuda = estado.includes('impag') || estado.includes('pend') || estado.includes('deuda');
+  return {
+    ...it,
+    nis_rad: clean, // <-- SIEMPRE el NIS correcto
+    index: i + 1,
+    periodo: it.mes || it.f_fact || '',
+    es_deuda,
+    color_estado: es_deuda ? '🟡 PENDIENTE' : '✅ PAGADO',
+    estado: es_deuda ? 'Pendiente' : 'Pagado', // <-- Normaliza el texto
+    datos_reales: true,
+    fuente: d.source || 'SEDAPAL_HTTP',
+  };
+});
         return { success:true, recibos:lista, total:lista.length, esReal:true };
       }
       if (d && d.success && Array.isArray(d.recibos)) {
