@@ -35,11 +35,12 @@ class SedapalAPISimple {
       const d = await r.json();
       if (d && d.ok === true && Array.isArray(d.items)) {
         const lista = d.items.map((it, i) => {
-  const estado = (it.estado || it.est_rec || '').toLowerCase();
-  const es_deuda = estado === 'deuda' || estado.includes('impag') || estado.includes('pend');
+  // Usa el campo correcto y normaliza
+  const estadoRaw = (it.estado || it.est_rec || '').toLowerCase();
+  const es_deuda = estadoRaw === 'deuda' || estadoRaw.includes('impag') || estadoRaw.includes('pend') || estadoRaw.includes('deuda');
   return {
     ...it,
-    nis_rad: clean, // siempre el NIS correcto
+    nis_rad: clean,
     index: i + 1,
     periodo: it.mes || it.f_fact || '',
     es_deuda,
