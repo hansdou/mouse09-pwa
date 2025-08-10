@@ -35,17 +35,16 @@ class SedapalAPISimple {
       const d = await r.json();
       if (d && d.ok === true && Array.isArray(d.items)) {
         const lista = d.items.map((it, i) => {
-  // Normaliza estado
   const estado = (it.estado || it.est_rec || '').toLowerCase();
-  const es_deuda = estado.includes('impag') || estado.includes('pend') || estado.includes('deuda');
+  const es_deuda = estado === 'deuda' || estado.includes('impag') || estado.includes('pend');
   return {
     ...it,
-    nis_rad: clean, // <-- SIEMPRE el NIS correcto
+    nis_rad: clean, // siempre el NIS correcto
     index: i + 1,
     periodo: it.mes || it.f_fact || '',
     es_deuda,
     color_estado: es_deuda ? '🟡 PENDIENTE' : '✅ PAGADO',
-    estado: es_deuda ? 'Pendiente' : 'Pagado', // <-- Normaliza el texto
+    estado: es_deuda ? 'Pendiente' : 'Pagado',
     datos_reales: true,
     fuente: d.source || 'SEDAPAL_HTTP',
   };
@@ -62,22 +61,28 @@ class SedapalAPISimple {
     }
   }
 
-  async descargarPDF(recibo) {
-    try {
-      const r = await fetch(`${this.pythonURL}/api/pdf/${recibo.nis_rad}/${recibo.recibo}`, { cache: 'no-store' });
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      const blob = await r.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = `SEDAPAL_${recibo.recibo}.pdf`;
-      document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(()=>URL.revokeObjectURL(url), 4000);
-      return { success:true };
-    } catch (e) {
-      console.error('❌ Error PDF:', e?.message || e);
-      return await this.generarPDFMejorado(recibo);
+async descargarPDF(recibo) {
+  try {
+    // Si nis_rad es 0, usa el suministro original (recibo.nis_rad || recibo.nis || recibo.suministro)
+    let nis = recibo.nis_rad;
+    if (!nis || nis === 0) {
+      // Intenta recuperar el NIS del recibo, o del input de búsqueda si lo tienes global
+      nis = recibo.nis || recibo.suministro || prompt("Ingrese el NIS original para este recibo:");
     }
+    const r = await fetch(`${this.pythonURL}/api/pdf/${nis}/${recibo.recibo}`, { cache: 'no-store' });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `SEDAPAL_${recibo.recibo}.pdf`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 4000);
+    return { success:true };
+  } catch (e) {
+    console.error('❌ Error PDF:', e?.message || e);
+    return await this.generarPDFMejorado(recibo);
   }
+}
 
   async generarPDFMejorado(recibo) {
     const fecha = new Date().toLocaleDateString('es-PE');
