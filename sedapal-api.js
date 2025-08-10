@@ -35,17 +35,17 @@ class SedapalAPISimple {
       const d = await r.json();
       if (d && d.ok === true && Array.isArray(d.items)) {
         const lista = d.items.map((it, i) => {
-  // Usa el campo correcto y normaliza
   const estadoRaw = (it.estado || it.est_rec || '').toLowerCase();
-  const es_deuda = estadoRaw === 'deuda' || estadoRaw.includes('impag') || estadoRaw.includes('pend') || estadoRaw.includes('deuda');
+  // Solo es pagado si el estado es exactamente "cobrado"
+  const es_pagado = estadoRaw === 'cobrado';
   return {
     ...it,
     nis_rad: clean,
     index: i + 1,
     periodo: it.mes || it.f_fact || '',
-    es_deuda,
-    color_estado: es_deuda ? '🟡 PENDIENTE' : '✅ PAGADO',
-    estado: es_deuda ? 'Pendiente' : 'Pagado',
+    es_deuda: !es_pagado,
+    color_estado: es_pagado ? '✅ PAGADO' : '🟡 PENDIENTE',
+    estado: es_pagado ? 'Pagado' : 'Pendiente',
     datos_reales: true,
     fuente: d.source || 'SEDAPAL_HTTP',
   };
@@ -53,7 +53,22 @@ class SedapalAPISimple {
         return { success:true, recibos:lista, total:lista.length, esReal:true };
       }
       if (d && d.success && Array.isArray(d.recibos)) {
-        return { success:true, recibos:d.recibos, total:d.total ?? d.recibos.length, esReal:true };
+        const lista = d.recibos.map((it, i) => {
+  const estadoRaw = (it.estado || it.est_rec || '').toLowerCase();
+  const es_pagado = estadoRaw === 'cobrado';
+  return {
+    ...it,
+    nis_rad: it.nis_rad || clean,
+    index: i + 1,
+    periodo: it.mes || it.f_fact || '',
+    es_deuda: !es_pagado,
+    color_estado: es_pagado ? '✅ PAGADO' : '🟡 PENDIENTE',
+    estado: es_pagado ? 'Pagado' : 'Pendiente',
+    datos_reales: true,
+    fuente: d.source || 'SEDAPAL_HTTP',
+  };
+});
+        return { success:true, recibos:lista, total:lista.length, esReal:true };
       }
       throw new Error('Respuesta desconocida del backend');
     } catch (e) {
